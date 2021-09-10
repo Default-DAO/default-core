@@ -5,7 +5,7 @@ pragma solidity ^0.8.0;
 import "../DefaultOS.sol";
 import "../Token/Token.sol";
 
-/// @title Installer for Epoch Module (EPC)
+/// @title Installer for Epoch module (EPC)
 /// @notice Factory contract for the Epoch module
 contract def_EpochInstaller is DefaultOSModuleInstaller("EPC") {
 
@@ -22,7 +22,7 @@ contract def_EpochInstaller is DefaultOSModuleInstaller("EPC") {
 }
 
 /// @title Epoch Module (EPC)
-/// @notice Instance of Epoch Module. Epoch allows DAO to keep track of weekly intervals, and mints new ERC20 tokens at the end of each interval
+/// @notice Instance of Epoch module. Epoch allows DAO to keep track of weekly intervals, and mints new ERC20 tokens at the end of each interval
 /// @dev In the future, Epoch module may allow DAO to set their own internal lengths (months, biweekly, etc)
 contract def_Epoch is DefaultOSModule {
   
