@@ -9,6 +9,8 @@ import "hardhat/console.sol";
 
 import "./DaoTracker.sol";
 
+/// @title Default OS Module Installer
+/// @notice Interface for a module installer - the factory contract that creates a module instance for a DAO. Each module will be associated to a unique three letter [A-Z] keycode
 abstract contract DefaultOSModuleInstaller is Ownable {
     bytes3 public moduleKeycode;
 
@@ -20,11 +22,16 @@ abstract contract DefaultOSModuleInstaller is Ownable {
         moduleKeycode = moduleKeycode_;
     }
 
+    /// @notice Install an instance of a module for a given DAO
+    /// @param os_ Address of DAO OS instance
+    /// @return moduleAddress Address of module instance
     function install(DefaultOS os_) external virtual returns (address moduleAddress) { // ensure only the OS owner can call install anything
         // require(false, "function install() must be implemented in the Default OS Module Installer");
     }
 }
 
+/// @title DefaultOS Module
+/// @notice Instance of a Default OS Module for Default OS instance.
 contract DefaultOSModule is Ownable {
     DefaultOS public _OS;
 
@@ -38,24 +45,39 @@ contract DefaultOSModule is Ownable {
     }
 }
 
+/// @title Default OS
+/// @notice Instance of a Default OS
 contract DefaultOS is Ownable {
 
     string public organizationName;    
     mapping(bytes3 => address) public MODULES;
 
+    /// @notice Set organization name and add DAO org ID to DAO tracker
+    /// @param organizationName_ Name of org
+    /// @param organizationId_ ID of org
+    /// @param daoTracker_ address of DAO tracker contract, which keeps track of all DAO OS instances
     constructor(string memory organizationName_, string memory organizationId_, DaoTracker daoTracker_) {
         organizationName = organizationName_;
         daoTracker_.setDao(organizationId_, address(this));
     }
 
+    /// @notice Allow DAO to add module to itself
+    /// @param installer_ Address of module's contract factory
     function installModule(DefaultOSModuleInstaller installer_) external onlyOwner {
         MODULES[installer_.moduleKeycode()] = installer_.install(this);
     }
 
+    /// @notice Get address of DAO's module instance
+    /// @param moduleKeycode_ Three letter [A-Z] keycode  of module
+    /// @return address Address of Module instance
     function getModule(bytes3 moduleKeycode_) external view returns (address) {
         return MODULES[moduleKeycode_];
     }
 
+    /// @notice Transfer ERC20 tokens from DAO to recipient 
+    /// @param token_ ERC20 token contract
+    /// @param recipient_ Address of recipient
+    /// @param amount_ Amount of tokens to transfer
     function transfer(IERC20 token_, address recipient_, uint256 amount_) external onlyOwner {
         token_.transfer(recipient_, amount_);
     }
