@@ -9,9 +9,15 @@ import "../Token/Token.sol";
 
 import "hardhat/console.sol";
 
+/// @title Installer for Peer Rewards module (PAY)
+/// @notice Factory contract for the Pay Rewards module
 contract def_PeerRewardsInstaller is DefaultOSModuleInstaller("PAY") {
     string public moduleName = "Default Peer Rewards";
 
+    /// @notice Install Pay Rewards module on a DAO 
+    /// @param os_ Instance of DAO OS
+    /// @return address Address of Peer Rewards module instance
+    /// @dev Requires TKN, MBR, EPC modules to be enabled on DAO
     function install(DefaultOS os_) external override returns (address) {
         def_PeerRewards peerRewards = new def_PeerRewards(os_);
         peerRewards.transferOwnership(address(os_)); 
@@ -19,6 +25,9 @@ contract def_PeerRewardsInstaller is DefaultOSModuleInstaller("PAY") {
     }
 }
 
+/// @title Peer Rewards module (PAY)
+/// @notice Instance of Peer Rewards module. Allows members to accrue allocations and redeem those allocations for tokens
+/// @dev Requires TKN, MBR, EPC modules to be enabled on DAO
 contract def_PeerRewards is DefaultOSModule{
 
     // Module Configuration
@@ -26,6 +35,7 @@ contract def_PeerRewards is DefaultOSModule{
     def_Members private _Members;
     def_Epoch private _Epoch;
 
+    /// @notice Set address of TKN, MBR, EPC modules to state
     constructor(DefaultOS os_) DefaultOSModule(os_) {
         _Token = def_Token(_OS.getModule("TKN"));
         _Members = def_Members(_OS.getModule("MBR"));
@@ -129,6 +139,8 @@ contract def_PeerRewards is DefaultOSModule{
     //           REGISTER FOR PEER REWARDS IN THE UPCOMING EPOCH
     // **********************************************************************
 
+    /// @notice Member can register points for their pariticipation in the next epoch. The amount of points given depends on how many epochs the member has consecutively participated
+    /// @dev Total rewards A memberA can give memberB in a given epoch is calculated as [Total epoch rewards] x [[Points registered by memberA in epoch] / [Total points registered in epoch]] X [[Allocation given to memberB by memberA in current epoch] / [Total allocations given by memberB in current epoch]] 
     function register() external {
         // get the current epoch for the OS
         uint16 currentEpoch = _Epoch.current();
@@ -176,7 +188,9 @@ contract def_PeerRewards is DefaultOSModule{
     //                     CONFIGURE THE ALLOCATION LIST
     // **********************************************************************
 
-    // configure the allocation pts for a member
+    /// @notice Change allocation one member is giving to another member for the current epoch
+    /// @param toMember_ Address of member that is receiving allocation
+    /// @param newAllocPts_ New allocation that will be set for the current epoch
     function configureAllocation(address toMember_, uint8 newAllocPts_) external {
         require (toMember_ != msg.sender, "def_PeerRewards | configureAllocation(): cannot allocate to self!");
         AllocationsList storage allocList = getAllocationsListFor[msg.sender];
@@ -203,7 +217,9 @@ contract def_PeerRewards is DefaultOSModule{
         emit AllocationSet(msg.sender, toMember_, newAllocPts_);
     }
 
-    // add a new allocation to the list
+    /// @notice Create allocation one member is giving to another member for the current epoch
+    /// @param toMember_ Address of member that is receiving allocation
+    /// @param newAllocPts_ New allocation that will be set for the current epoch
     function _addNewAllocation(address toMember_, uint8 newAllocPts_) private {
         AllocationsList storage allocList = getAllocationsListFor[msg.sender];
 
@@ -238,6 +254,9 @@ contract def_PeerRewards is DefaultOSModule{
         allocList.totalPts += newAllocPts_;
     }
 
+    /// @notice Update allocation one member is giving to another member for the current epoch
+    /// @param toMember_ Address of member that is receiving allocation
+    /// @param newAllocPts_ New allocation that will be set for the current epoc
     function _changeExistingAllocation(address toMember_, uint8 newAllocPts_) private {
         AllocationsList storage allocList = getAllocationsListFor[msg.sender];
         AllocData memory curAlloc = allocList.allocData[toMember_];
@@ -269,6 +288,8 @@ contract def_PeerRewards is DefaultOSModule{
         }
     }
 
+    /// @notice Delete allocation one member is giving to another member for the current epoch
+    /// @param toMember_ Address of member that had received allocation
     function _deleteAllocation(address toMember_) private {
         AllocationsList storage allocList = getAllocationsListFor[msg.sender];
         AllocData memory curAlloc = allocList.allocData[toMember_];
@@ -314,6 +335,7 @@ contract def_PeerRewards is DefaultOSModule{
     //                COMMIT ALLOCATION FOR CURRENT EPOCH
     // **********************************************************************
 
+    /// @notice Commit senders allocations and convert them to mintable tokens that recipients can convert to tokens
     function commitAllocation() external {
         AllocationsList storage allocList = getAllocationsListFor[msg.sender];
         uint16 currentEpoch = _Epoch.current();
@@ -365,6 +387,7 @@ contract def_PeerRewards is DefaultOSModule{
     //                   CLAIM ALL AVAILABLE PEER REWARDS
     // **********************************************************************
 
+    /// @notice Convert all member's unclaimed mintable tokens into actual tokens
     function claimRewards() external {
         uint16 currentEpoch = _Epoch.current();
         uint16 lastClaimed = lastEpochClaimed[msg.sender];

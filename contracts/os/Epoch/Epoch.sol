@@ -14,6 +14,7 @@ contract def_EpochInstaller is DefaultOSModuleInstaller("EPC") {
   /// @notice Install Epoch module on a DAO 
   /// @param os_ Instance of DAO OS
   /// @return address Address of Epoch module instance
+  /// @dev Requires TKN modules to be enabled on DAO
   function install(DefaultOS os_) external override returns (address) {
       def_Epoch epoch = new def_Epoch(os_);
       epoch.transferOwnership(address(os_)); 
@@ -31,6 +32,7 @@ contract def_Epoch is DefaultOSModule {
 
   /// @notice Set address of ERC20 token module (DKN) of DAO in state
   /// @param os_ Instance of DAO OS
+  /// @dev Requires TKN module to be enabled on DAO
   constructor(DefaultOS os_) DefaultOSModule(os_) {
     _Token = def_Token(_OS.getModule("TKN"));
   }

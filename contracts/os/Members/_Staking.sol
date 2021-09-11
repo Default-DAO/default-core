@@ -45,13 +45,15 @@ pragma solidity ^0.8.0;
 import "../DefaultOS.sol";
 import "hardhat/console.sol";
 
+/// @title Staking contract
+/// @notice Add and remove token stakes.
 contract Staking {
 
     // pack the struct variables--order declaration matters!
     // single stake object for a list of stakes
     struct Stake {
         uint16 expiryEpoch; // epoch when this batch of staked tokens expire => (lock duration + epoch staked). used as the comparison for the list sort.
-        uint16 lockDuration; // used for endorsement multiplier logic around different lock durations 
+        uint16 lockDuration; // # of epochs that token will be staked for 
         uint32 prevStakeId; // id of prev stake to expire in sorted linked list of staking blocks
         uint32 nextStakeId; // id of next stake to expire in linked list of staking blocks
         uint256 amountStaked; // DEF tokens amount staked in this batch
@@ -66,8 +68,7 @@ contract Staking {
         mapping(uint32 => Stake) getStakeForId; // key is a composite id consisting of expiryEpoch + lockDuration
     }
 
-
-    // get the list of stakes for a given member;
+    /// @notice Get the list of stakes for a given member;
     mapping(address => StakesList) public getStakesForMember;
 
 
@@ -76,7 +77,10 @@ contract Staking {
     //                          GENERATE STAKE ID
     // **********************************************************************
 
-    // used to get the stake object from the mapping
+    /// @notice Construct stake ID. Used as the comparison for the list sort
+    /// @param expiryEpoch_ Epoch when this batch of staked tokens expire
+    /// @param lockDuration_ # of epochs that token will be staked for
+    /// @return stakeId Composite stake ID
     function _packStakeId(uint16 expiryEpoch_, uint16 lockDuration_) internal pure returns(uint32 stakeId) {
 
         // shift expiry epoch 16 bits to the left and append the 16bit lock duration at the end to create a composite ID
@@ -89,7 +93,10 @@ contract Staking {
     //              GET STAKE EXPIRY AND DURATION FROM STAKE ID
     // **********************************************************************
 
-    // deconstruct the composite ID of the stake to get the expiry epoch and lock duration
+    /// @notice Deconstruct the composite ID of the stake to get the expiry epoch and lock duration
+    /// @param stakeId_ Composite stake ID
+    /// @return lockDuration # of epochs that token will be staked for
+    /// @return expiryEpoch Epoch when this batch of staked tokens expire
     function _unpackStakeId(uint32 stakeId_) internal pure returns(uint16 lockDuration, uint16 expiryEpoch) {
 
         // save the left 16 bits of the Id as the expiry Epoch
@@ -107,7 +114,11 @@ contract Staking {
     //                        REGISTER A NEW STAKE
     // **********************************************************************
 
-    // When registering new stakes, do a sorted insert into the doubly linked list based on expiryEpoch
+    /// @notice Register a new stake
+    /// @dev Does a sorted insert into the doubly linked list based on expiryEpoch
+    /// @param expiryEpoch_ Epoch when this batch of staked tokens expire
+    /// @param lockDuration_ # of epochs that token will be staked for
+    /// @param amount_ Number of tokens to stake
     function _registerNewStake(uint16 expiryEpoch_, uint16 lockDuration_, uint256 amount_) internal {
 
         StakesList storage stakes = getStakesForMember[msg.sender];
@@ -142,7 +153,10 @@ contract Staking {
         }
     }
 
-    // push stake to end of list
+    /// @notice Push stake to end of list
+    /// @param expiryEpoch_ Epoch when this batch of staked tokens expire
+    /// @param lockDuration_ # of epochs that token will be staked for
+    /// @param amount_ Number of tokens to stake
     function _pushStake(uint16 expiryEpoch_, uint16 lockDuration_, uint256 amount_) internal {
 
         StakesList storage stakes = getStakesForMember[msg.sender];
@@ -167,8 +181,11 @@ contract Staking {
         stakes.numStakes++;
     }
 
-
-    // insert the stake before given stake
+    /// @notice Insert a new stake before given stake
+    /// @param insertedBeforeStakeId_ Composite ID of stake that new stake will be inserted before
+    /// @param expiryEpoch_ Epoch when this batch of staked tokens expire
+    /// @param lockDuration_ # of epochs that token will be staked for
+    /// @param amount_ Number of tokens to stake
     function _insertStakeBefore(uint32 insertedBeforeStakeId_, uint16 expiryEpoch_, uint16 lockDuration_, uint256 amount_) internal {
 
         // ensure there are existing stakes before inserting new stake before anything
@@ -208,6 +225,11 @@ contract Staking {
     //                        DEQUEUE A NEW STAKE
     // **********************************************************************
 
+
+    /// @notice Dequeue the first stake in the queue
+    /// @return lockDuration_ # of epochs that token will be staked for
+    /// @return expiryEpoch_ Epoch when this batch of staked tokens expire
+    /// @return amountStaked_ Number of tokens that were staked
     function _dequeueStake() internal returns (uint16 lockDuration_, uint16 expiryEpoch_, uint256 amountStaked_) {
 
         // Ensure stakes exist before dequeueing

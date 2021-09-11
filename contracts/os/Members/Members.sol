@@ -8,9 +8,15 @@ import "../Members/_Staking.sol";
 import "../Token/Token.sol";
 import "hardhat/console.sol";
 
+/// @title Installer for Members module (MBR)
+/// @notice Factory contract for the Member Module
 contract def_MembersInstaller is DefaultOSModuleInstaller("MBR") {
     string public moduleName = "Default Members";
 
+  /// @notice Install Member module on a DAO 
+  /// @param os_ Instance of DAO OS
+  /// @return address Address of Member module instance
+  /// @dev Requires EPC and TKN modules to be enabled on DAO
     function install(DefaultOS os_) external override returns (address) {
         def_Members members = new def_Members(os_);
         members.transferOwnership(address(os_)); 
@@ -18,12 +24,17 @@ contract def_MembersInstaller is DefaultOSModuleInstaller("MBR") {
     }
 }
 
+/// @title Member module (MBR)
+/// @notice Instance of Member module. This module allows members to create aliases and create/use endorsements
+/// @dev Requires EPC and TKN modules to be enabled on DAO
 contract def_Members is Staking, DefaultOSModule {
 
     // Module Configuration
     def_Token private _Token;
     def_Epoch private _Epoch;
 
+    /// @notice Set TKN and EPC module addresses to state
+    /// @param os_ Instance of DAO OS
     constructor(DefaultOS os_) DefaultOSModule(os_) {
       _Epoch = def_Epoch(_OS.getModule("EPC"));
       _Token = def_Token(_OS.getModule("TKN"));
@@ -38,7 +49,6 @@ contract def_Members is Staking, DefaultOSModule {
     event EndorsementWithdrawn(address fromMember, address toMember, uint256 endorsementsWithdrawn, uint16 currentEpoch);
 
 
-    // alias stuff
     mapping(bytes32 => address) public getMemberForAlias;
     mapping(address => bytes32) public getAliasForMember;
 
@@ -58,6 +68,8 @@ contract def_Members is Staking, DefaultOSModule {
     // max amount of endorsements a member can receive from another member
     uint256 public ENDORSEMENT_LIMIT = 300000;
     
+    /// @notice Set global limit on endorsements a member can receive from another member
+    /// @param newLimit_ Max amount of endorsements a member can receive from another member
     function setEndorsementLimit(uint256 newLimit_) external onlyOwner {
         ENDORSEMENT_LIMIT = newLimit_;
     }
@@ -67,6 +79,8 @@ contract def_Members is Staking, DefaultOSModule {
     //                     SET THE ALIAS FOR THE MEMBER
     // **********************************************************************
 
+    /// @notice Set alias for address
+    /// @param alias_ Human readable alias for member
     function setAlias(bytes32 alias_) external {
         // make sure the alias space is empty 
         require (getMemberForAlias[alias_] == address(0), "def_Members | (): Members | setAlias(): alias is already taken");
@@ -80,6 +94,9 @@ contract def_Members is Staking, DefaultOSModule {
     //                     MINT ENDORSEMENTS TO GIVE
     // **********************************************************************
 
+    /// @notice Create endorsements by staking tokens. Total endorsements = tokensStaked x [multipler based on the # lockDuration]
+    /// @param lockDuration_ # of epochs that token will be staked for
+    /// @param tokensStaked_ @ of tokens to stake
     function mintEndorsements(uint16 lockDuration_, uint256 tokensStaked_) external {
         require (tokensStaked_ > 0, "def_Members | (): def_Members | mintEndorsements() : member must stake more than 0 tokens");
         require (lockDuration_ >= 50, "def_Members | (): def_Members | mintEndorsements(): member must stake for at least 50 epochs");
@@ -96,7 +113,9 @@ contract def_Members is Staking, DefaultOSModule {
         emit TokensStaked(msg.sender, tokensStaked_, lockDuration_, _Epoch.current());
     }
 
-    // endorsement multipliers for staking, based on duration. Increase scale quadratically to incentivize long term holder
+    /// @notice Endorsement multipliers for staking, based on duration. Increase scale quadratically to incentivize long term holder
+    /// @param lockDuration_ # of epochs that token will be staked for
+    /// @return multiplier Multiplier that will be used in the endorsement menting calculation
     function _getMultiplierForStakingDuration(uint16 lockDuration_) private pure returns (uint256 multiplier) {
         if (lockDuration_ < 50 ) { return 0; }
         else if (lockDuration_ >= 50  && lockDuration_ < 100) { return 1; }
@@ -112,6 +131,7 @@ contract def_Members is Staking, DefaultOSModule {
     //                  RECLAIM TOKENS FROM EXPIRED STAKES
     // **********************************************************************
 
+    /// @notice Reclaim staked tokens by trading in endorsements. Confirms that tokens have expired and member will have enough remaining endorsements after reclaiming tokens
     function reclaimTokens() external {
 
         // get the stakes for the caller
@@ -136,6 +156,9 @@ contract def_Members is Staking, DefaultOSModule {
     //                        ENDORSE ANOTHER MEMBER
     // **********************************************************************
 
+    /// @notice Give endorsements to another member
+    /// @param targetMember_ Address of member who will receive endorsements
+    /// @param endorsementsGiven_ # of endorsements to give
     function endorseMember(address targetMember_, uint256 endorsementsGiven_) external {
 
         // ensure that the member has enough endorsements available
@@ -161,7 +184,10 @@ contract def_Members is Staking, DefaultOSModule {
     // **********************************************************************
     //               WITHDRAW ENDORSEMENTS FROM ANOTHER MEMBER
     // **********************************************************************
-
+    
+    /// @notice Withdrawl endorsements given to another member
+    /// @param targetMember_ Address of member to withdrawl endorsements from
+    /// @param endorsementsWithdrawn_ # of endorsements to withdrawl
     function withdrawEndorsementFrom(address targetMember_, uint256 endorsementsWithdrawn_) external {
 
         // ensure that the member has enough endorsements to withdraw
