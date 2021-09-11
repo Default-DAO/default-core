@@ -6,6 +6,8 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "hardhat/console.sol";
 
+/// @title Vault
+/// @notice Vault allows a member to deposit an ERC20 tokens with a DAO.The member receives shares in the vault in exchange, and these shares are themselves ERC20 tokens that can only be transferred by the DAO. Each vault holds a single token.
 contract Vault is ERC20, Ownable {
     uint8 private _decimals;
     IERC20 private _Asset; // the token that the vault can custody
@@ -19,7 +21,10 @@ contract Vault is ERC20, Ownable {
         return _decimals;
     }
 
-    // Deposit assets at the DAO. Get shares in the vaults.
+    /// @notice Deposit at the DAO and get shares in the vault
+    /// @dev Total amount of shares calculated as [Total assets deposited] * [[Total shares oustanding] / [Total assets in vault]]]
+    /// @param member_ Address of member to deposit shares on behalf of
+    /// @param depositAmount_ Total amount to deposit of a given asset to deposit in vault
     function deposit(address member_, uint256 depositAmount_) external onlyOwner returns (uint256) {
         uint256 totalAssetsInVault = _Asset.balanceOf(address(this));
         uint256 totalSharesOutstanding = totalSupply();
@@ -51,7 +56,10 @@ contract Vault is ERC20, Ownable {
         return sharesToMint;
     }
 
-    // Open the vault. Return assets to the user and burn their shares of the vault.
+    /// @notice Open the vault. Return assets to the user and burn their shares of the vault.
+    /// @dev Total amount of asset to withdrawl is [Total shares redeemed as a % of total # of shares] * [Amount of assets in vault]
+    /// @param member_ Address of member to deposit shares on behalf of
+    /// @param totalSharesRedeemed_ Total amount to shares to trade in for the originally deosited asset
     function withdraw(address member_, uint256 totalSharesRedeemed_) external onlyOwner returns (uint256 tokensWithdrawn) {
 
         uint256 totalAssetsInVault = _Asset.balanceOf(address(this));
@@ -74,12 +82,12 @@ contract Vault is ERC20, Ownable {
         return amountToWithdraw;
     }
     
-    // restrict share transfers to the OS to prevent secondary markets for vault shares, e.g.
-    // letting vault depositors exit without paying the withdraw fee, or borrowing against the shares in lending protocols
+    /// @notice restrict share transfers to the OS to prevent secondary markets for vault shares, e.g. letting vault depositors exit without paying the withdraw fee, or borrowing against the shares in lending protocols
     function transfer(address recipient_, uint256 amount_) public override onlyOwner returns (bool) {
         return super.transfer(recipient_, amount_);
     }
 
+    /// @notice restrict share transfers to the OS to prevent secondary markets for vault shares, e.g. letting vault depositors exit without paying the withdraw fee, or borrowing against the shares in lending protocols
     function transferFrom(address sender_, address recipient_, uint256 amount_) public override onlyOwner returns (bool) {
         _transfer(sender_, recipient_, amount_);
         return true;

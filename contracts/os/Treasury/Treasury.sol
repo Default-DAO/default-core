@@ -6,9 +6,17 @@ import "../DefaultOS.sol";
 import "../Epoch/Epoch.sol";
 import "./_Vault.sol";
 
+
+/// @title Installer for Treasury module (TSY)
+/// @notice Factory contract for the Member Module
 contract def_TreasuryInstaller is DefaultOSModuleInstaller("TSY") {
     string public moduleName = "Default Treasury";
 
+
+    /// @notice Install Treasury module on a DAO 
+    /// @param os_ Instance of DAO OS
+    /// @return address Address of Member module instance
+    /// @dev Requires EPC module to be enabled on DAO
     function install(DefaultOS os_) external override returns (address) {
         def_Treasury treasury = new def_Treasury(os_);
         treasury.transferOwnership(address(os_));
@@ -16,6 +24,8 @@ contract def_TreasuryInstaller is DefaultOSModuleInstaller("TSY") {
     }
 }
 
+/// @title Treasury module (TSY)
+/// @dev A treasury is a collection of vaults and each vault can store a single token. Members can deposit and withdrawl from vaults, and the treasury takes a % fee from each withdrawl
 contract def_Treasury is DefaultOSModule {
 
     def_Epoch private _Epoch;
@@ -40,7 +50,9 @@ contract def_Treasury is DefaultOSModule {
     //                   OPEN NEW VAULT (GOVERNANCE ONLY)
     // **********************************************************************
 
-    // open a new vault for the treasury (accept deposits for specific token)
+    /// @notice Open a new vault of a specific token for the treasury. (Governance only)
+    /// @param token_ Address of token to create a vault for
+    /// @param fee_ Percentage fee (0-100) that members will pay to the DAO from each withdrawl
     function openVault(address token_, uint8 fee_) external onlyOS {
         // make sure no vault exists for this token
         require(
@@ -81,7 +93,9 @@ contract def_Treasury is DefaultOSModule {
     //             WITHDRAW FOR FREE FROM VAULT (GOVERNANCE ONLY)
     // **********************************************************************
 
-    // For the DAO/OS to withdraw earned fees from the vault
+    /// @notice Withdraw DAO's earned fees from the vault. (Governance only)
+    /// @param vault_ Address of vault
+    /// @param amountshares_ # of shares to withdrawl in exchange fo
     function withdrawFromVault(Vault vault_, uint256 amountshares_)
         external
         onlyOS
@@ -101,6 +115,10 @@ contract def_Treasury is DefaultOSModule {
     //                   CHANGE VAULT FEE (GOVERNANCE ONLY)
     // **********************************************************************
 
+
+    /// @notice Withdraw earned fees from the vault. No fee will be charged on this withdrawl. (Governance only)
+    /// @param vault_ Address of vault
+    /// @param newFeePctg New percentage fee (0-100) that members will pay to the DAO from each withdrawl
     function changeFee(Vault vault_, uint8 newFeePctg) external onlyOS {
         require(newFeePctg >= 0 && newFeePctg <= 100);
 
@@ -114,6 +132,9 @@ contract def_Treasury is DefaultOSModule {
     //                   DEPOSIT USER FUNDS INTO VAULT
     // **********************************************************************
 
+    /// @notice Deposit tokens into vault
+    /// @param vault_ Address of vault
+    /// @param amountTokens_ Number of tokens to withdrawl
     function deposit(Vault vault_, uint256 amountTokens_) external {
 
         // deposit the users funds
@@ -131,6 +152,9 @@ contract def_Treasury is DefaultOSModule {
     //                   WITHDRAW USER FUNDS FROM VAULT
     // **********************************************************************
 
+    /// @notice User can exchange their shares in vault for the original ERC-20 token
+    /// @param vault_ Address of vault
+    /// @param amountShares_ Amount of shares to trade in for tokens
     function withdraw(Vault vault_, uint256 amountShares_) external {
 
         // calculate the fee collected upon withdraw and transfer shares to the wallet
