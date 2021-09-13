@@ -25,7 +25,7 @@ contract def_TreasuryInstaller is DefaultOSModuleInstaller("TSY") {
 }
 
 /// @title Treasury module (TSY)
-/// @dev A treasury is a collection of vaults and each vault can store a single token. Members can deposit and withdrawl from vaults, and the treasury takes a % fee from each withdrawl
+/// @dev A treasury is a collection of vaults and each vault can store a single token. Members can deposit and withdraw from vaults, and the treasury takes a % fee from each withdraw
 contract def_Treasury is DefaultOSModule {
 
     def_Epoch private _Epoch;

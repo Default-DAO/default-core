@@ -28,7 +28,7 @@ contract def_MiningInstaller is DefaultOSModuleInstaller("MNE") {
 }
 
 /// @title Mining module (MNE)
-/// @notice Allows members of DAO to mine native token. Rewards have a set value that can be changed by the DAO. Rewards are distributed equally to all each held in the vault.
+/// @notice Allows members of DAO to mine the DAO's native token. Rewards have a set value that can be changed by the DAO. Rewards are distributed equally to all each held in the vault.
 contract def_Mining is DefaultOSModule {
 
     // Module Configuration
