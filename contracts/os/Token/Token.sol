@@ -24,7 +24,8 @@ contract def_TokenInstaller is DefaultOSModuleInstaller("TKN") {
 }
 
 /// @title Token module (TKN)
-/// @notice Instance of Token module. Tokens set to three decimals
+/// @notice Instance of Token module. 
+/// @dev Tokens set to three decimals
 contract def_Token is DefaultOSModule, ERC20("Default Token", "DEF") {
 
     // 3 decimals

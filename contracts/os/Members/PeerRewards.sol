@@ -26,7 +26,7 @@ contract def_PeerRewardsInstaller is DefaultOSModuleInstaller("PAY") {
 }
 
 /// @title Peer Rewards module (PAY)
-/// @notice Instance of Peer Rewards module. Allows members to accrue allocations and redeem those allocations for tokens
+/// @notice Instance of Peer Rewards module. This module creates a weekly vote on who should receive allocations. Members cannot vote for themselves and the number of votes each member can give is determined via a combination of the number of endorsements they have and how many consecutive weeks they've been partipating in allocations. A member must manually register to be part of that epoch's allocation round. Relative allocation votes from each member are carried over epoch-to-epoch but can also be manually changed. Members can exchange their accrued allocations for tokens at any time.
 /// @dev Requires TKN, MBR, EPC modules to be enabled on DAO
 contract def_PeerRewards is DefaultOSModule{
 
@@ -139,7 +139,7 @@ contract def_PeerRewards is DefaultOSModule{
     //           REGISTER FOR PEER REWARDS IN THE UPCOMING EPOCH
     // **********************************************************************
 
-    /// @notice Member can register points for their pariticipation in the next epoch. The amount of points given depends on how many epochs the member has consecutively participated
+    /// @notice Member can register points for their pariticipation in the next epoch. The amount of points given to a member depends on how many epochs the member has consecutively participated and their total endorsements
     /// @dev Total rewards A memberA can give memberB in a given epoch is calculated as [Total epoch rewards] x [[Points registered by memberA in epoch] / [Total points registered in epoch]] X [[Allocation given to memberB by memberA in current epoch] / [Total allocations given by memberB in current epoch]] 
     function register() external {
         // get the current epoch for the OS

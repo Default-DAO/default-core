@@ -15,14 +15,14 @@ contract DefaultOSFactory is Ownable {
   event DaoCreated(address os, string id);
 
   /// @notice Get the address associated with a DAO's string ID
-  /// @param daoId Human readable ID of DAO
+  /// @param daoId ID of DAO
   /// @return address Address associated with the the DAO
   function getDao(string memory daoId) public view returns (address) {
     return daoMap[daoId];
   }
 
-  /// @notice Add a new DAO to list of DAOs. Cannot be used to change address of existing DAO
-  /// @param daoId Human readable ID of DAO
+  /// @notice Add a new DAO to full list of DAOs using DefaultOS. 
+  /// @param daoId ID of DAO
   function setDao(string memory daoId, address os) public {
     require(daoMap[daoId] == address(0), "DefaultOSFactory | setDao(): Alias already taken");
     daoMap[daoId] = os;
