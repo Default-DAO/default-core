@@ -38,7 +38,7 @@ contract def_Epoch is DefaultOSModule {
   }
 
   // emitted events
-  event EpochIncremented(uint16 currentEpoch, uint256 epochTime);
+  event EpochIncremented(uint16 epoch, uint256 epochTime);  
 
   uint16 public current = 1;
   uint256 public epochTime = block.timestamp;
@@ -47,16 +47,16 @@ contract def_Epoch is DefaultOSModule {
   /// @notice Set amount of tokens that will be minted at the end of each epoch
   /// @param newTokenBonus_ Amount of tokens to be minted each epoch
   function setTokenBonus(uint256 newTokenBonus_) external onlyOS {
-    TOKEN_BONUS = newTokenBonus_;
+    TOKEN_BONUS = newTokenBonus_;    
   }
 
   /// @notice Once 7 days have passed from the start of the last epoch, start a new epoch and mint new tokens
   function incrementEpoch() external {        
-    require(block.timestamp >= epochTime + (7 days), "def_Epoch | incrementEpoch(): cannot increment epoch before deadline");
+    require(block.timestamp >= epochTime + (7 days), "cannot increment epoch before deadline");
     epochTime = block.timestamp;
     current++;
 
     _Token.mint(msg.sender, TOKEN_BONUS);
     emit EpochIncremented(current, epochTime);
-  }    
+  }
 }

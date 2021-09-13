@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 import "hardhat/console.sol";
 
-import "./DaoTracker.sol";
+import "./DefaultOSFactory.sol";
 
 /// @title Default OS Module Installer
 /// @notice Interface for a module installer - the factory contract that creates a module instance for a DAO. Each module will be associated to a unique three letter [A-Z] keycode
@@ -15,9 +15,12 @@ abstract contract DefaultOSModuleInstaller is Ownable {
     bytes3 public moduleKeycode;
 
     constructor(bytes3 moduleKeycode_) {
-        for (uint i = 0; i < 3; i++) {
+        for (uint256 i = 0; i < 3; i++) {
             bytes1 char = moduleKeycode_[i];
-            require (char >= 0x41 && char <= 0x5A, "DefaultOS Module: Invalid Keycode");  // A-Z only
+            require(
+                char >= 0x41 && char <= 0x5A,
+                "DefaultOS Module: Invalid Keycode"
+            ); // A-Z only
         }
         moduleKeycode = moduleKeycode_;
     }
@@ -25,7 +28,12 @@ abstract contract DefaultOSModuleInstaller is Ownable {
     /// @notice Install an instance of a module for a given DAO
     /// @param os_ Address of DAO OS instance
     /// @return moduleAddress Address of module instance
-    function install(DefaultOS os_) external virtual returns (address moduleAddress) { // ensure only the OS owner can call install anything
+    function install(DefaultOS os_)
+        external
+        virtual
+        returns (address moduleAddress)
+    {
+        // ensure only the OS owner can call install anything
         // require(false, "function install() must be implemented in the Default OS Module Installer");
     }
 }
@@ -39,32 +47,42 @@ contract DefaultOSModule is Ownable {
         _OS = os_;
     }
 
-    modifier onlyOS() {
-        require(msg.sender == _OS.owner());
-        _;
+    modifier onlyOS() {      
+      require(msg.sender == _OS.owner(), "only the os owner can make this call");
+      _;
     }
 }
 
 /// @title Default OS
 /// @notice Instance of a Default OS
 contract DefaultOS is Ownable {
-
-    string public organizationName;    
+    string public organizationName;
     mapping(bytes3 => address) public MODULES;
 
     /// @notice Set organization name and add DAO org ID to DAO tracker
     /// @param organizationName_ Name of org
     /// @param organizationId_ ID of org
     /// @param daoTracker_ address of DAO tracker contract, which keeps track of all DAO OS instances
-    constructor(string memory organizationName_, string memory organizationId_, DaoTracker daoTracker_) {
+    constructor(
+        string memory organizationName_,
+        string memory organizationId_,
+        DefaultOSFactory factory_
+    ) {
         organizationName = organizationName_;
-        daoTracker_.setDao(organizationId_, address(this));
+        factory_.setDao(organizationId_, address(this));
     }
 
+    event ModuleInstalled(bytes3 moduleKeycode, address OSAddress, address moduleAddress);
     /// @notice Allow DAO to add module to itself
     /// @param installer_ Address of module's contract factory
-    function installModule(DefaultOSModuleInstaller installer_) external onlyOwner {
-        MODULES[installer_.moduleKeycode()] = installer_.install(this);
+    function installModule(DefaultOSModuleInstaller installer_)
+        external
+        onlyOwner
+    {
+        bytes3 moduleKeyCode = installer_.moduleKeycode();        
+        MODULES[moduleKeyCode] = installer_.install(this);
+
+        emit ModuleInstalled(moduleKeyCode, address(this), MODULES[moduleKeyCode]);
     }
 
     /// @notice Get address of DAO's module instance
@@ -78,7 +96,11 @@ contract DefaultOS is Ownable {
     /// @param token_ ERC20 token contract
     /// @param recipient_ Address of recipient
     /// @param amount_ Amount of tokens to transfer
-    function transfer(IERC20 token_, address recipient_, uint256 amount_) external onlyOwner {
+    function transfer(
+        IERC20 token_,
+        address recipient_,
+        uint256 amount_
+    ) external onlyOwner {
         token_.transfer(recipient_, amount_);
     }
 }

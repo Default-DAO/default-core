@@ -9,25 +9,41 @@ const { ethers } = require("hardhat");
 
 async function main() {
 
-  const DaoTracker = await ethers.getContractFactory("DaoTracker");
+  const DefaultOSFactory = await ethers.getContractFactory("DefaultOSFactory");
 
   const DefaultOS = await ethers.getContractFactory("DefaultOS");
 
   const DefaultTokenInstaller = await ethers.getContractFactory("def_TokenInstaller");
+  const DefaultEpochInstaller = await ethers.getContractFactory("def_EpochInstaller");
+  const DefaultTreasuryInstaller = await ethers.getContractFactory("def_TreasuryInstaller");
+  const DefaultMiningInstaller = await ethers.getContractFactory("def_MiningInstaller");
+  const DefaultTokenInstaller = await ethers.getContractFactory("def_TokenInstaller");
   const DefaultMembersInstaller = await ethers.getContractFactory("def_MembersInstaller");
   const DefaultPeerRewardsInstaller = await ethers.getContractFactory("def_PeerRewardsInstaller");
 
-  const daoTracker = await DaoTracker.deploy()
-  await daoTracker.deployed();
-  console.log("[CONTRACT DEPLOYED] DaoTracker: ", daoTracker.address);
+  const defaultOSFactory = await DefaultOSFactory.deploy()
+  await defaultOSFactory.deployed();
+  console.log("[CONTRACT DEPLOYED] DefaultOSFactory: ", defaultOSFactory.address);
 
-  const defaultOS = await DefaultOS.deploy("Default DAO", "default", daoTracker.address)
+  const defaultOS = await DefaultOS.deploy("Default DAO", "default", defaultOSFactory.address)
   await defaultOS.deployed();
   console.log("[CONTRACT DEPLOYED] DefaultOS: ", defaultOS.address);
   
   const defaultTokenInstaller = await DefaultTokenInstaller.deploy();
   await defaultTokenInstaller.deployed();
   console.log("[CONTRACT DEPLOYED] DefaultTokenInstaller: ", defaultTokenInstaller.address);
+
+  const defaultEpochInstaller = await DefaultEpochInstaller.deploy();
+  await defaultEpochInstaller.deployed();
+  console.log("[CONTRACT DEPLOYED] DefaultEpochInstaller: ", defaultEpochInstaller.address);
+
+  const defaultTreasuryInstaller = await DefaultTreasuryInstaller.deploy();
+  await defaultTreasuryInstaller.deployed();
+  console.log("[CONTRACT DEPLOYED] DefaultTreasuryInstaller: ", defaultTreasuryInstaller.address);
+
+  const defaultMiningInstaller = await DefaultMiningInstaller.deploy();
+  await defaultMiningInstaller.deployed();
+  console.log("[CONTRACT DEPLOYED] DefaultMiningInstaller: ", defaultMiningInstaller.address);
 
   const defaultMembersInstaller = await DefaultMembersInstaller.deploy();
   await defaultMembersInstaller.deployed();
@@ -37,7 +53,11 @@ async function main() {
   await defaultPeerRewardsInstaller.deployed();
   console.log("[CONTRACT DEPLOYED] DefaultMembersInstaller: ", defaultPeerRewardsInstaller.address);
 
+  await defaultOSFactory.setDao(defaultOS.address)
   await defaultOS.installModule(defaultTokenInstaller.address);
+  await defaultOS.installModule(defaultEpochInstaller.address);
+  await defaultOS.installModule(defaultTreasuryInstaller.address);
+  await defaultOS.installModule(defaultMiningInstaller.address);
   await defaultOS.installModule(defaultMembersInstaller.address);
   await defaultOS.installModule(defaultPeerRewardsInstaller.address);
 }

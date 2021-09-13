@@ -63,10 +63,13 @@ contract Vault is ERC20, Ownable {
     function withdraw(address member_, uint256 totalSharesRedeemed_) external onlyOwner returns (uint256 tokensWithdrawn) {
 
         uint256 totalAssetsInVault = _Asset.balanceOf(address(this));
+        uint256 totalSharesOutstanding = totalSupply();
+
+        require(totalSharesOutstanding > 0, "shares must exist");
 
         // Integer rounding here should create very slight share surpluses over time (in solidity, int division always rounds down) 
         // e.g. 1 * 1 / 2 = 0
-        uint256 amountToWithdraw = totalAssetsInVault * totalSharesRedeemed_ / totalSupply();
+        uint256 amountToWithdraw = totalAssetsInVault * totalSharesRedeemed_ / totalSharesOutstanding;
 
         // Ensure withdraw can succeed just in case rounding error somehow causes vault to not have enough assets
         if (amountToWithdraw > totalAssetsInVault) { 

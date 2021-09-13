@@ -5,15 +5,17 @@
 
 pragma solidity ^0.8.0;
 
+import "hardhat/console.sol";
+
 import "../DefaultOS.sol";
 import "../Token/Token.sol";
 import "../Epoch/Epoch.sol";
 import "./Treasury.sol";
 import "./_Vault.sol";
 
-/// @title Installer for Mining module (MNE)
+/// @title Installer for Mining module (MNG)
 /// @notice Factory contract for the Mining Module
-contract def_MiningInstaller is DefaultOSModuleInstaller("MNE") {
+contract def_MiningInstaller is DefaultOSModuleInstaller("MNG") {
     string public moduleName = "Default Treasury Mining";
 
     /// @notice Install Mining module on a DAO 
@@ -27,7 +29,7 @@ contract def_MiningInstaller is DefaultOSModuleInstaller("MNE") {
     }
 }
 
-/// @title Mining module (MNE)
+/// @title Mining module (MNG)
 /// @notice Allows members of DAO to mine the DAO's native token. Rewards have a set value that can be changed by the DAO. Rewards are distributed equally to all each held in the vault.
 contract def_Mining is DefaultOSModule {
 
@@ -44,11 +46,15 @@ contract def_Mining is DefaultOSModule {
         _Treasury = def_Treasury(_OS.getModule("TSY"));
     }
 
+
     // emitted events
     event RewardsIssued(uint16 currentEpoch, uint256 newRewardsPerShare);
+    event RewardsClaimed(uint16 epochClaimed, address member, uint256 totalRewardsClaimed);
+    event Registered(uint16 currentEpoch, address member);
 
 
     mapping(address => uint256) unclaimableRewards;
+    mapping(address => bool) registered;
 
 
     uint256 public accRewardsPerShare = 0;
@@ -81,13 +87,8 @@ contract def_Mining is DefaultOSModule {
     /// @dev Available rewards are calculated as the [[sender's total balance in the vault] X [multipler on the reward per share]] - [unclaimable rewards for the sender]
     /// @dev Rewards are denominated in the token's units / [1e12]
     function pendingRewards() public view returns (uint256) {
-        uint256 totalHistoricalRewards = _vault.balanceOf(msg.sender) * accRewardsPerShare;
+        uint256 totalHistoricalRewards = _vault.balanceOf(msg.sender) * accRewardsPerShare;                
         uint256 finalDepositorRewards = (totalHistoricalRewards - unclaimableRewards[msg.sender]) / MULT;
-
-        // just in case somehow rounding error causes finalDepositorRewards to exceed the balance of the tokens in the contract
-        if ( finalDepositorRewards > _Token.balanceOf(address(this)) ) {
-             finalDepositorRewards = _Token.balanceOf(address(this));
-        }
 
         return finalDepositorRewards;
     }
@@ -101,8 +102,8 @@ contract def_Mining is DefaultOSModule {
     /// @notice Assign the vault contract to be mined. This "activates" the mining program
     /// @param token_ the Address of the token to be mined
     /// @dev The token should have a vault in the treasury before calling this function
-    function assignVault(address token_) external onlyOwner {
-        require (address(_vault) == address(0), "can only assign vault once");
+    function assignVault(address token_) external onlyOS {        
+        require (address(_vault) == address(0), "can only assign vault once");        
         _vault = _Treasury.getVault(token_);
     }
 
@@ -119,19 +120,19 @@ contract def_Mining is DefaultOSModule {
     function issueRewards() external {
 
         // issue only once per epoch
-        require (lastEpochIssued != _Epoch.current(), "Mining.sol: rewards have already been accumulated for the current Epoch");
-        require (address(_vault) != address(0), "Mining.sol: vault is not configured!");
+        require (lastEpochIssued != _Epoch.current(), "rewards have already been accumulated for the current epoch");
+        require (address(_vault) != address(0), "vault is not configured!");
+        require (_vault.totalSupply() > 0, "vault supply has to exist");
 
         // record that rewards have been issued for the current epoch
         lastEpochIssued = _Epoch.current();
 
         // rewards per share for this epoch
-        uint256 newRewardsPerShare = EPOCH_MINING_REWARDS * MULT / _vault.totalSupply();
-
+        uint256 newRewardsPerShare = EPOCH_MINING_REWARDS * MULT / _vault.totalSupply();        
         // increment the accRewardsPerShare based on the total deposits at the time of calling this function
-        accRewardsPerShare += newRewardsPerShare;
-
+        accRewardsPerShare += newRewardsPerShare;        
         // mint the caller tokens for their service!
+
         _Token.mint(msg.sender, TOKEN_BONUS);
 
         emit RewardsIssued(_Epoch.current(), newRewardsPerShare);
@@ -146,7 +147,11 @@ contract def_Mining is DefaultOSModule {
     /// @notice Reset the mining rewards for member to 0.
     /// @dev This function sets unclaimable rewards to the total balance of rewards for the member. This effectively sets rewards to zero since redeemable rewards = total possible rewards - uncaimable rewards
     function register() external {
+        // reset the unclaimable rewards to the latest amount.
         unclaimableRewards[msg.sender] = _vault.balanceOf(msg.sender) * accRewardsPerShare;
+        registered[msg.sender] = true;
+
+        emit Registered(_Epoch.current(), msg.sender);
     }
 
 
@@ -157,15 +162,17 @@ contract def_Mining is DefaultOSModule {
 
     /// @notice Redeem all available rewards 
     function claimRewards() external {
-        require (unclaimableRewards[msg.sender] != 0, "def_Mining | claimRewards(): Member is not registered for mining program");
+        require (registered[msg.sender], "member is not registered for mining program");
         
         // save the pending rewards available to user
         uint256 rewards = pendingRewards();
 
-        // reset the mining rewards counter for member to 0.
+        // reset the unclaimable rewards to the latest amount.
         unclaimableRewards[msg.sender] = _vault.balanceOf(msg.sender) * accRewardsPerShare;
 
         // mint the pending rewards to the user
         _Token.mint(msg.sender, rewards);
+
+        emit RewardsClaimed(_Epoch.current(), msg.sender, rewards);
     }
 }

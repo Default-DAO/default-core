@@ -7,11 +7,12 @@ import "hardhat/console.sol";
 
 /// @title DAO Tracker
 /// @notice Keep track of global state of full list of DAOs and the addresses these DAOs map to
-contract DaoTracker is Ownable {  
-  event DaoCreated(address os, string id);
-
+contract DefaultOSFactory is Ownable { 
+    
   mapping(string => address) public daoMap;
   address[] private daoList;
+
+  event DaoCreated(address os, string id);
 
   /// @notice Get the address associated with a DAO's string ID
   /// @param daoId Human readable ID of DAO
@@ -23,7 +24,7 @@ contract DaoTracker is Ownable {
   /// @notice Add a new DAO to list of DAOs. Cannot be used to change address of existing DAO
   /// @param daoId Human readable ID of DAO
   function setDao(string memory daoId, address os) public {
-    require(daoMap[daoId] == address(0), "DaoTracker | setDao(): Alias already taken");
+    require(daoMap[daoId] == address(0), "DefaultOSFactory | setDao(): Alias already taken");
     daoMap[daoId] = os;
     daoList.push(daoMap[daoId]);
 

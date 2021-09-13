@@ -2,18 +2,8 @@
 // testing could be a lot more robust. Good onboarding task to learn the algo.
 
 const { expect } = require("chai");
+const { incrementWeek } = require("../utils");
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
-
-async function incrementWeek() {
-  const sevenDays = 7 * 24 * 60 * 60;        
-
-  const blockNumBefore = await ethers.provider.getBlockNumber();
-  const blockBefore = await ethers.provider.getBlock(blockNumBefore);
-  const timestampBefore = blockBefore.timestamp;
-
-  await ethers.provider.send('evm_setNextBlockTimestamp', [timestampBefore + sevenDays])
-  await ethers.provider.send('evm_mine');
-}
 
 describe("Peer Rewards Module", async function () {
 
@@ -26,10 +16,9 @@ describe("Peer Rewards Module", async function () {
     this.userD = this.signers[4];
     this.userE = this.signers[5];
 
-    this.DaoTracker = await ethers.getContractFactory("DaoTracker")
+    this.DefaultOSFactory = await ethers.getContractFactory("DefaultOSFactory")
     this.DefaultOS = await ethers.getContractFactory("DefaultOS");
     this.DefaultTokenInstaller = await ethers.getContractFactory("def_TokenInstaller");
-
     this.DefaultMembersInstaller = await ethers.getContractFactory("def_MembersInstaller");
     this.DefaultPeerRewardsInstaller = await ethers.getContractFactory("def_PeerRewardsInstaller");
     this.DefaultEpochInstaller = await ethers.getContractFactory("def_EpochInstaller");
@@ -37,11 +26,14 @@ describe("Peer Rewards Module", async function () {
     this.membersModule = await this.DefaultMembersInstaller.deploy();
     await this.membersModule.deployed();
 
-    this.daoTracker = await this.DaoTracker.deploy()
-    await this.daoTracker.deployed()
+    this.factory = await this.DefaultOSFactory.deploy()
+    await this.factory.deployed()
 
-    this.defaultOS = await this.DefaultOS.deploy("Default DAO", "default", this.daoTracker.address);
+    this.defaultOS = await this.DefaultOS.deploy("Default DAO", "default", this.factory.address);
     this.default = await this.defaultOS.deployed();
+
+    this.tokenModule = await this.DefaultTokenInstaller.deploy();
+    await this.tokenModule.deployed();
 
     this.epochModule = await this.DefaultEpochInstaller.deploy();
     await this.epochModule.deployed();
@@ -49,17 +41,14 @@ describe("Peer Rewards Module", async function () {
     this.membersModule = await this.DefaultMembersInstaller.deploy();
     await this.membersModule.deployed();
 
-    this.tokenModule = await this.DefaultTokenInstaller.deploy();
-    await this.tokenModule.deployed();
-
     this.peerRewardsModule = await this.DefaultPeerRewardsInstaller.deploy();
     await this.peerRewardsModule.deployed();
 
-    await this.default.installModule(this.epochModule.address);
-    this.epoch = await ethers.getContractAt("def_Epoch", await this.default.getModule("0x455043")); // "EPC"
-
     await this.default.installModule(this.tokenModule.address);
     this.token = await ethers.getContractAt("def_Token", await this.default.getModule("0x544b4e")); // "TKN"
+
+    await this.default.installModule(this.epochModule.address);
+    this.epoch = await ethers.getContractAt("def_Epoch", await this.default.getModule("0x455043")); // "EPC"
 
     await this.default.installModule(this.membersModule.address);
     this.members = await ethers.getContractAt("def_Members", await this.default.getModule("0x4d4252")); // "MBR"
@@ -383,7 +372,7 @@ describe("Peer Rewards Module", async function () {
 
   describe("claiming rewards", async function () {
     it("cannot be claimed in the same epoch", async function () {
-      await expect(this.rewards.connect(this.userB).claimRewards()).to.be.revertedWith("def_PeerRewards | claimRewards(): rewards claimed cannot be empty");
+      await expect(this.rewards.connect(this.userB).claimRewards()).to.be.revertedWith("user must have rewards to claim");
     })
 
     it("rewards can be claimed after 1 epoch", async function () {
@@ -408,13 +397,15 @@ describe("Peer Rewards Module", async function () {
       await this.epoch.incrementEpoch(); // epoch: 8
 
       expect(await this.rewards.mintableRewards(7, this.userB.address)).to.equal(50000);
-      expect(await this.rewards.claimedRewards(7, this.userB.address)).to.equal(false);
+      expect(await this.rewards.lastEpochClaimed(this.userB.address)).to.equal(0);
 
       await expect(this.rewards.connect(this.userB).claimRewards())
         .to.emit(this.rewards, "RewardsClaimed")
         .withArgs(this.userB.address, 50000, 8);
 
-      expect(await this.rewards.claimedRewards(7, this.userB.address)).to.equal(true);
+      expect(await this.rewards.lastEpochClaimed(this.userB.address)).to.equal(
+        await this.epoch.current() - 1
+      );
     })
 
     it("rewards can be claimed after 1 epoch", async function () {
@@ -462,13 +453,13 @@ describe("Peer Rewards Module", async function () {
       await this.epoch.incrementEpoch(); // 13
 
       expect(await this.rewards.mintableRewards(9, this.userB.address)).to.equal(50000);
-      expect(await this.rewards.claimedRewards(9, this.userB.address)).to.equal(false);
+      expect(await this.rewards.lastEpochClaimed(this.userB.address)).to.equal(0);
 
       expect(await this.rewards.mintableRewards(10, this.userB.address)).to.equal(50000);
-      expect(await this.rewards.claimedRewards(10, this.userB.address)).to.equal(false);
+      expect(await this.rewards.lastEpochClaimed(this.userB.address)).to.equal(0);
 
       expect(await this.rewards.mintableRewards(11, this.userB.address)).to.equal(50000);
-      expect(await this.rewards.claimedRewards(11, this.userB.address)).to.equal(false);
+      expect(await this.rewards.lastEpochClaimed(this.userB.address)).to.equal(0);
 
       await expect(this.rewards.connect(this.userB).claimRewards())
         .to.emit(this.rewards, "RewardsClaimed")
@@ -476,43 +467,9 @@ describe("Peer Rewards Module", async function () {
 
       expect(await this.token.balanceOf(this.userB.address)).to.equal(200000);
 
-      expect(await this.rewards.claimedRewards(9, this.userB.address)).to.equal(true);
-      expect(await this.rewards.claimedRewards(10, this.userB.address)).to.equal(true);
-      expect(await this.rewards.claimedRewards(11, this.userB.address)).to.equal(true);
+      expect(await this.rewards.lastEpochClaimed(this.userB.address)).to.equal(await this.epoch.current() - 1);      
 
-      await expect(this.rewards.connect(this.userB).claimRewards()).to.be.revertedWith("def_PeerRewards | claimRewards(): rewards claimed cannot be empty")
-    })
-
-    it("expires rewards after 4 epochs", async function () {
-      // allocate rewards
-      await this.rewards.connect(this.userA).register();
-      await this.rewards.connect(this.userB).register();
-      await this.rewards.connect(this.userC).register();
-      await this.rewards.connect(this.userD).register();
-      await this.rewards.connect(this.userE).register();
-
-      await incrementWeek()
-      await this.epoch.incrementEpoch(); // epoch: 14
-
-      await this.rewards.connect(this.userA).configureAllocation(this.userB.address, 1);
-      await this.rewards.connect(this.userA).configureAllocation(this.userC.address, 2);
-      await this.rewards.connect(this.userA).configureAllocation(this.userD.address, 3);
-      await this.rewards.connect(this.userA).configureAllocation(this.userE.address, 4);
-
-      await this.rewards.connect(this.userA).commitAllocation();
-
-      await incrementWeek()
-      await this.epoch.incrementEpoch(); // epoch: 15
-      await incrementWeek()
-      await this.epoch.incrementEpoch(); // epoch: 16
-      await incrementWeek()
-      await this.epoch.incrementEpoch(); // epoch: 17
-      await incrementWeek()
-      await this.epoch.incrementEpoch(); // epoch: 18
-      await incrementWeek()
-      await this.epoch.incrementEpoch(); // epoch: 19
-
-      await expect(this.rewards.connect(this.userB).claimRewards()).to.be.revertedWith("def_PeerRewards | claimRewards(): rewards claimed cannot be empty")
+      await expect(this.rewards.connect(this.userB).claimRewards()).to.be.revertedWith("nothing available to claim")
     })
   })
 })
