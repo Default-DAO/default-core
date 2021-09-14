@@ -14,12 +14,11 @@ contract def_MembersInstaller is DefaultOSModuleInstaller("MBR") {
     string public moduleName = "Default Members";
 
   /// @notice Install Member module on a DAO 
-  /// @param os_ Instance of DAO OS
   /// @return address Address of Member module instance
-  /// @dev Requires EPC and TKN modules to be enabled on DAO
-    function install(DefaultOS os_) external override returns (address) {
-        def_Members members = new def_Members(os_);
-        members.transferOwnership(address(os_)); 
+  /// @dev Requires EPC and TKN modules to be enabled on DAO. install() is called by the DAO contract
+    function install() external override returns (address) {
+        def_Members members = new def_Members(DefaultOS(msg.sender));
+        members.transferOwnership(msg.sender); 
         return address(members);
     }
 }

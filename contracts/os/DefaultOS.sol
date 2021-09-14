@@ -26,9 +26,9 @@ abstract contract DefaultOSModuleInstaller is Ownable {
     }
 
     /// @notice Install an instance of a module for a given DAO
-    /// @param os_ Address of DAO OS instance
     /// @return moduleAddress Address of module instance
-    function install(DefaultOS os_)
+    /// @dev install() is called by the DAO contract
+    function install()
         external
         virtual
         returns (address moduleAddress)
@@ -62,7 +62,7 @@ contract DefaultOS is Ownable {
     /// @notice Set organization name and add DAO org ID to DAO tracker
     /// @param organizationName_ Name of org
     /// @param organizationId_ ID of org
-    /// @param daoTracker_ address of DAO tracker contract, which keeps track of all DAO OS instances
+    /// @param factory_ address of DAO factory contract, which keeps track of all DAO OS instances
     constructor(
         string memory organizationName_,
         string memory organizationId_,
@@ -80,7 +80,7 @@ contract DefaultOS is Ownable {
         onlyOwner
     {
         bytes3 moduleKeyCode = installer_.moduleKeycode();        
-        MODULES[moduleKeyCode] = installer_.install(this);
+        MODULES[moduleKeyCode] = installer_.install();
 
         emit ModuleInstalled(moduleKeyCode, address(this), MODULES[moduleKeyCode]);
     }

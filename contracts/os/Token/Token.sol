@@ -14,11 +14,11 @@ contract def_TokenInstaller is DefaultOSModuleInstaller("TKN") {
     string public moduleName = "DefaultOS ERC20 Token";
 
   /// @notice Install Token module on a DAO 
-  /// @param os_ Instance of DAO OS
   /// @return address Address of Token module instance
-    function install(DefaultOS os_) external override returns (address) {
-        def_Token token = new def_Token(os_);
-        token.transferOwnership(address(os_)); 
+  /// @dev install() is called by the DAO contract
+    function install() external override returns (address) {
+        def_Token token = new def_Token(DefaultOS(msg.sender));
+        token.transferOwnership(msg.sender); 
         return address(token);
     }
 }

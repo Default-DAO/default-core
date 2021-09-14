@@ -14,12 +14,11 @@ contract def_TreasuryInstaller is DefaultOSModuleInstaller("TSY") {
 
 
     /// @notice Install Treasury module on a DAO 
-    /// @param os_ Instance of DAO OS
     /// @return address Address of Member module instance
-    /// @dev Requires EPC module to be enabled on DAO
-    function install(DefaultOS os_) external override returns (address) {
-        def_Treasury treasury = new def_Treasury(os_);
-        treasury.transferOwnership(address(os_));
+    /// @dev Requires EPC module to be enabled on DAO. install() is called by the DAO contract
+    function install() external override returns (address) {
+        def_Treasury treasury = new def_Treasury(DefaultOS(msg.sender));
+        treasury.transferOwnership(msg.sender);
         return address(treasury);
     }
 }

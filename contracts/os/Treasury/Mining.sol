@@ -19,18 +19,17 @@ contract def_MiningInstaller is DefaultOSModuleInstaller("MNG") {
     string public moduleName = "Default Treasury Mining";
 
     /// @notice Install Mining module on a DAO 
-    /// @param os_ Instance of DAO OS
     /// @return address Address of Mining module instance
-    /// @dev Requires TKN, EPC, and TSY modules to be enabled on DAO
-    function install(DefaultOS os_) external override returns (address) {
-        def_Mining Mining = new def_Mining(os_);
-        Mining.transferOwnership(address(os_)); 
+    /// @dev Requires TKN, EPC, and TSY modules to be enabled on DAO. install() is called by the DAO contract
+    function install() external override returns (address) {
+        def_Mining Mining = new def_Mining(DefaultOS(msg.sender));
+        Mining.transferOwnership(msg.sender); 
         return address(Mining);
     }
 }
 
 /// @title Mining module (MNG)
-/// @notice Allows members of DAO to mine the DAO's native token. Rewards have a set value that can be changed by the DAO. Rewards are distributed equally to all each held in the vault.
+/// @notice Allows members of DAO to mine the DEF token. Rewards have a set value that can be changed by the DAO. Rewards are distributed equally to all each held in the vault.
 contract def_Mining is DefaultOSModule {
 
     // Module Configuration

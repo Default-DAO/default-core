@@ -15,12 +15,11 @@ contract def_PeerRewardsInstaller is DefaultOSModuleInstaller("PAY") {
     string public moduleName = "Default Peer Rewards";
 
     /// @notice Install Pay Rewards module on a DAO 
-    /// @param os_ Instance of DAO OS
     /// @return address Address of Peer Rewards module instance
     /// @dev Requires TKN, MBR, EPC modules to be enabled on DAO
-    function install(DefaultOS os_) external override returns (address) {
-        def_PeerRewards peerRewards = new def_PeerRewards(os_);
-        peerRewards.transferOwnership(address(os_)); 
+    function install() external override returns (address) {
+        def_PeerRewards peerRewards = new def_PeerRewards(DefaultOS(msg.sender));
+        peerRewards.transferOwnership(msg.sender); 
         return address(peerRewards);
     }
 }

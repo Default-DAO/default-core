@@ -11,13 +11,12 @@ contract def_EpochInstaller is DefaultOSModuleInstaller("EPC") {
 
   string public moduleName = "Epoch";
 
-  /// @notice Install Epoch module on a DAO 
-  /// @param os_ Instance of DAO OS
+  /// @notice Install Epoch module on a DAO. 
   /// @return address Address of Epoch module instance
-  /// @dev Requires TKN modules to be enabled on DAO
-  function install(DefaultOS os_) external override returns (address) {
-      def_Epoch epoch = new def_Epoch(os_);
-      epoch.transferOwnership(address(os_)); 
+  /// @dev Requires TKN modules to be enabled on DAO. install() is called by the DAO contract
+  function install() external override returns (address) {
+      def_Epoch epoch = new def_Epoch(DefaultOS(msg.sender));
+      epoch.transferOwnership(msg.sender); 
       return address(epoch);
   }
 }
