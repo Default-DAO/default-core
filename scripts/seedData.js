@@ -2,45 +2,80 @@ const { ethers } = require("hardhat");
 const faker = require('faker');
 const deploy = require('./init');
 
-const membersModInfo = {
-  keyCode: ethers.utils.toUtf8Bytes("MBR"),
-  name: "def_Members",
-};
-const tokenModInfo = {
-  keyCode: ethers.utils.toUtf8Bytes("TKN"),
-  name: "def_Token",
-};
-const peerRewardsModInfo = {
-  keyCode: ethers.utils.toUtf8Bytes("PAY"),
-  name: "def_PeerRewards",
-};
-const epochModInfo = {
-  keyCode: ethers.utils.toUtf8Bytes("EPC"),
-  name: "def_Epoch"
+// populate the addresses in the config object to reuse existing contracts.
+// otherwise new contracts will be deployed.
+const config = {
+  factoryAddress: null,
+  tokenInstallerAddress: null,
+  epochInstallerAddress: null,
+  treasuryInstallerAddress: null,
+  miningInstallerAddress: null,
+  membersInstallerAddress: null,
+  rewardsInstallerAddress: null,
 };
 
+const tokenModInfo = createModInfo('def_Token', 'TKN');
+const epochModInfo = createModInfo('def_Epoch', 'EPC');
+const treasuryModInfo = createModInfo('def_Treasury', 'TSY');
+const miningModInfo = createModInfo('def_Mining', 'MNG');
+const membersModInfo = createModInfo('def_Members', 'MBR');
+const peerRewardsModInfo = createModInfo('def_PeerRewards', 'PAY');
+
+seedData();
+
 async function seedData() {  
-  const { 
-    defaultOs, 
-    defaultOsFactory,
-    defaultTokenInstaller,
-    defaultEpochInstaller,
-    defaultTreasuryInstaller,
-    defaultMiningInstaller,
-    defaultMembersInstaller,
-    defaultPeerRewardsInstaller,
-  } = await deploy();
   const accounts = await ethers.getSigners();
 
   const testOsName = ethers.utils.formatBytes32String('testOs');
   const otherOsName = ethers.utils.formatBytes32String('otherOs');
 
+  let { 
+    factoryAddress,
+    tokenInstallerAddress, 
+    epochInstallerAddress,
+    treasuryInstallerAddress,
+    miningInstallerAddress,
+    membersInstallerAddress,
+    rewardsInstallerAddress,
+  } = config;
+
+  // if all required addresses are populated then use them, otherwise 
+  // run the deploy script
+  if (Object.keys(config).every(key => config[key] !== null)) {
+    console.log('Using existing contract addresses');
+    console.log(`[USING CONTRACT] DefaultOSFactory: ${factoryAddress}`)
+    console.log(`[USING CONTRACT] DefaultTokenInstaller: ${tokenInstallerAddress}`);
+    console.log(`[USING CONTRACT] DefaultEpochInstaller: ${epochInstallerAddress}`);
+    console.log(`[USING CONTRACT] DefaultTreasuryInstaller: ${treasuryInstallerAddress}`);
+    console.log(`[USING CONTRACT] DefaultMiningInstaller: ${miningInstallerAddress}`);
+    console.log(`[USING CONTRACT] DefaultMembersInstaller: ${membersInstallerAddress}`);
+    console.log(`[USING CONTRACT] DefaultPeerRewardsInstaller: ${rewardsInstallerAddress}`);
+    factory = await ethers.getContractAt("DefaultOSFactory", factoryAddress);    
+  } else {
+    const { 
+      defaultOsFactory,
+      defaultTokenInstaller,
+      defaultEpochInstaller,
+      defaultTreasuryInstaller,
+      defaultMiningInstaller,
+      defaultMembersInstaller,
+      defaultPeerRewardsInstaller,
+    } = await deploy();
+    factory = defaultOsFactory;
+    tokenInstallerAddress = defaultTokenInstaller.address;
+    epochInstallerAddress = defaultEpochInstaller.address;
+    treasuryInstallerAddress = defaultTreasuryInstaller.address;
+    miningInstallerAddress = defaultMiningInstaller.address;
+    membersInstallerAddress = defaultMembersInstaller.address;
+    rewardsInstallerAddress = defaultPeerRewardsInstaller.address;
+  }
+
   // create two new test OSs
-  await defaultOsFactory.setOS(testOsName);
-  await defaultOsFactory.setOS(otherOsName);
+  await factory.setOS(testOsName);
+  await factory.setOS(otherOsName);
   
-  const testOsAddress = await defaultOsFactory.osMap(testOsName);
-  const otherOsAddress = await defaultOsFactory.osMap(otherOsName);
+  const testOsAddress = await factory.osMap(testOsName);
+  const otherOsAddress = await factory.osMap(otherOsName);
 
   const testOs = await ethers.getContractAt("DefaultOS", testOsAddress);
   const otherOs = await ethers.getContractAt("DefaultOS", otherOsAddress);
@@ -53,19 +88,19 @@ async function seedData() {
   const otherOsMembers = accounts.slice(-half);
 
   // install all modules for each os
-  await testOs.installModule(defaultTokenInstaller.address);
-  await testOs.installModule(defaultEpochInstaller.address);
-  await testOs.installModule(defaultTreasuryInstaller.address);
-  await testOs.installModule(defaultMiningInstaller.address);
-  await testOs.installModule(defaultMembersInstaller.address);
-  await testOs.installModule(defaultPeerRewardsInstaller.address);
+  await testOs.installModule(tokenInstallerAddress);
+  await testOs.installModule(epochInstallerAddress);
+  await testOs.installModule(treasuryInstallerAddress);
+  await testOs.installModule(miningInstallerAddress);
+  await testOs.installModule(membersInstallerAddress);
+  await testOs.installModule(rewardsInstallerAddress);
 
-  await otherOs.installModule(defaultTokenInstaller.address);
-  await otherOs.installModule(defaultEpochInstaller.address);
-  await otherOs.installModule(defaultTreasuryInstaller.address);
-  await otherOs.installModule(defaultMiningInstaller.address);
-  await otherOs.installModule(defaultMembersInstaller.address);
-  await otherOs.installModule(defaultPeerRewardsInstaller.address);
+  await otherOs.installModule(tokenInstallerAddress);
+  await otherOs.installModule(epochInstallerAddress);
+  await otherOs.installModule(treasuryInstallerAddress);
+  await otherOs.installModule(miningInstallerAddress);
+  await otherOs.installModule(membersInstallerAddress);
+  await otherOs.installModule(rewardsInstallerAddress);
 
   // get members module contract info
   const testOsMemMod = await getModuleContract(testOs, membersModInfo);
@@ -429,4 +464,6 @@ async function getModuleContract(os, moduleInfo) {
   return mod;
 }
 
-seedData();
+function createModInfo(name, keyCode) { 
+  return { name, keyCode: ethers.utils.toUtf8Bytes(keyCode) };
+}
